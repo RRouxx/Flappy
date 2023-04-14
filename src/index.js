@@ -29,15 +29,16 @@ var livesText;
 var gameOver = false;
 
 function preload () {
-    this.load.image('background', 'ruta/al/fondo.png');
-    this.load.image('ball', 'https://labs.phaser.io/assets/sprites/balls/ball1.png');
-    this.load.image('paddle', 'https://labs.phaser.io/assets/sprites/paddle.png');
-    this.load.image('brick', 'https://labs.phaser.io/assets/sprites/bricks/brick1.png');
+    this.load.image('background', 'assets/sky.png');
+    this.load.image('ball', 'assets/Ball.png');
+    this.load.image('paddle', 'assets/Paddle.png');
+    this.load.image('brick', 'assets/Brick.png');
 }
 
 function create() {
     // Establece el fondo personalizado
-    this.add.image(0, 0, 'background').setOrigin(0);
+    //this.add.image(0, 0, 'background').setOrigin(0);
+    this.cameras.main.setBackgroundColor('#00FFFF');
 
     // Crea la pelota y establece sus propiedades
     this.ball = this.physics.add.image(300, 400, 'ball');
