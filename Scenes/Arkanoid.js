@@ -8,7 +8,7 @@ var config = {
         default: 'arcade',
         arcade: {
             gravity: {y: 0},
-            debug: false
+            gravity: false
         }
     },
     scene: {
@@ -23,72 +23,126 @@ var ball;
 var paddle;
 var bricks;
 var score = 0;
+var highScore = 0;
 var scoreText;
+var highScoreText;
 var lives = 3;
 var livesText;
 var gameOver = false;
 
+
 function preload () {
-    this.load.image('background', 'ruta/al/fondo.png');
-    this.load.image('ball', 'https://labs.phaser.io/assets/sprites/balls/ball1.png');
-    this.load.image('paddle', 'https://labs.phaser.io/assets/sprites/paddle.png');
-    this.load.image('brick', 'https://labs.phaser.io/assets/sprites/bricks/brick1.png');
+    this.load.image('background', 'assets/background.jpg');
+    this.load.image('ball', 'assets/Ball.png');
+    this.load.image('paddle', 'assets/Paddle.png');
+    this.load.image('brick', 'assets/Brick.png');
 }
 
-function create() {
-    // Establece el fondo personalizado
-    this.add.image(0, 0, 'background').setOrigin(0);
+function create () {
 
-    // Crea la pelota y establece sus propiedades
-    this.ball = this.physics.add.image(300, 400, 'ball');
-    this.ball.setCollideWorldBounds(true);
-    this.ball.setBounce(1);
+        //Se agrega la imagen de fondo al juego en la posición (0, 0).
+        this.add.image(0, 0, 'background').setOrigin(0);
 
-    // Crea la paleta y establece sus propiedades
-    this.paddle = this.physics.add.image(300, 450, 'paddle');
-    this.paddle.setCollideWorldBounds(true);
-    this.paddle.setImmovable(true);
-
-    // Crea la colisión entre la pelota y la paleta
-    this.physics.add.collider(this.ball, this.paddle, function() {
-        this.ball.setVelocityY(-300);
-    }, null, this);
+        //Se crea la bola y se establecen sus propiedades de rebote, colisión con los límites del mundo y velocidad.
+        ball = this.physics.add.sprite(config.width / 2, config.height - 50, 'ball');
+        ball.setBounce(1);
+        ball.setCollideWorldBounds(true);
+        ball.setVelocity(200, -200);
     
-    // Crea un texto para mostrar "Lose"
-    this.loseText = this.add.text(200, 200, 'Lose', { font: '48px Arial', fill: '#ffffff' });
-    this.loseText.visible = false;
-
-    // Crea un botón de reinicio
-    this.restartButton = this.add.text(200, 300, 'Restart', { font: '24px Arial', fill: '#ffffff' });
-    this.restartButton.visible = false;
-    this.restartButton.setInteractive();
-    this.restartButton.on('pointerdown', function() {
-        this.scene.restart();
-    }, this);
-}
-
-function update() {
-    // Mueve la paleta con las teclas de flecha izquierda y derecha
-    if (this.input.keyboard.isDown(Phaser.Input.Keyboard.KeyCodes.LEFT)) {
-        this.paddle.setVelocityX(-300);
-    } else if (this.input.keyboard.isDown(Phaser.Input.Keyboard.KeyCodes.RIGHT)) {
-        this.paddle.setVelocityX(300);
-    } else {
-        this.paddle.setVelocityX(0);
-    }
-
-    // Si la pelota cae al fondo, muestra "Lose" y el botón de reinicio
-    if (this.ball.y > 480) {
-        this.ball.setPosition(300, 400);
-        this.ball.setVelocity(0, 0);
-        this.loseText.visible = true;
-        this.restartButton.visible = true;
+        //Se crea la paleta del jugador y se establece como inamovible.
+        paddle = this.physics.add.sprite(config.width / 2, config.height - 10, 'paddle');
+        paddle.setImmovable(true);
+    
+        bricks = this.physics.add.staticGroup({
+            key: 'brick',
+            frameQuantity: 20,
+            gridAlign: {
+                width: 10,
+                height: 4,
+                cellWidth: 70,
+                cellHeight: 70,
+                x: 55,
+                y: 55
+            }
+        });       
+        
+        //Se crea el texto del puntaje, del puntaje más alto y de las vidas del jugador.
+        scoreText = this.add.text(16, 16, 'Score: 0', { fontSize: '20px', fill: '#00FFFF' });
+        //highScoreText = this.add.text(200, 16, 'High Score: 0', { fontSize: '32px', fill: '#00FFFF' });
+        livesText = this.add.text(config.width - 170, 16, 'Lives: 3', { fontSize: '20px', fill: '#00FFFF' });
     }
     
-    // Si la pelota pasa la paleta, muestra "Lose" y el botón de reinicio
-    if (this.ball.y > this.paddle.y + 30) {
-        this.loseText.visible = true;
-        this.restartButton.visible = true;
-    }
-}
 
+    function update () {
+        if (gameOver) {
+            return;
+        }
+        
+        // Movimiento del paddle
+        if (this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.LEFT).isDown) {
+            paddle.setVelocityX(-400);
+        } else if (this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.RIGHT).isDown) {
+            paddle.setVelocityX(400);
+        } else {
+            paddle.setVelocityX(0);
+        }
+        
+        // Rebote instantáneo de la bola con el paddle
+        this.physics.add.collider(ball, paddle, function () {
+            const diff = ball.x - paddle.x;
+            ball.setVelocityY(-300);
+            if (ball.body.velocity.x < 0) {
+                ball.setVelocityX(-10 * diff);
+            } else if (ball.body.velocity.x > 0) {
+                ball.setVelocityX(10 * diff);
+            }
+        });
+        
+        // Comprobar si la bola ha caído al fondo de la pantalla
+        if (ball.y > config.height) {
+            // Reducir el número de vidas y comprobar si se ha perdido el juego
+            lives--;
+            livesText.setText('Lives: ' + lives);
+            if (lives === 0) {
+                gameOver = true;
+                scoreText.setText("You lose! Press 'R' to restart");
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", highScore);
+                }
+            } else {
+                // Reiniciar la bola y la paleta a sus posiciones iniciales
+                ball.setPosition(config.width / 2, config.height - 50);
+                ball.setVelocity(200, -200);
+                paddle.setPosition(config.width / 2, config.height - 10);
+            }
+        }
+        
+        // Actualización del High Score
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem("highScore", highScore);
+        }
+        
+        // Actualización de los textos
+        scoreText.setText('Score: ' + score + ' High Score: ' + highScore);
+        scoreText.setFill("#00FFFF");
+        livesText.setFill("#00FFFF");
+        
+        // Colisión entre la bola y los ladrillos
+        this.physics.add.collider(ball, bricks, function (ball, brick) {
+            brick.disableBody(true, true);
+            score += 10;
+            
+            // Si se han destruido todos los ladrillos, se gana el juego
+            if (bricks.countActive() === 0) {
+                gameOver = true;
+                scoreText.setText("You win! Press 'R' to restart");
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", highScore);
+                }
+            }
+    
+          });
+          }
